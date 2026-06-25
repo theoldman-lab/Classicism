@@ -1,0 +1,258 @@
+{
+  "meta": {
+    "description": "Golden test vectors for Phase 1 crypto port",
+    "generatedAt": "2026-06-25T10:26:33.979Z",
+    "source": "util/crypto.js"
+  },
+  "md5": {
+    "empty": {
+      "input": "",
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "digestLength": 32
+    },
+    "hello": {
+      "input": "hello",
+      "digest": "5d41402abc4b2a76b9719d911017c592",
+      "digestLength": 32
+    },
+    "eapi_digest_search": {
+      "input": "nobody/api/search/getuse{\"s\":\"test\",\"type\":\"1\",\"limit\":\"30\"}md5forencrypt",
+      "digest": "047446cca5a7313b1653933a331667a4",
+      "digestLength": 32
+    },
+    "eapi_digest_chinese": {
+      "input": "nobody/api/search/getuse{\"s\":\"周杰伦\",\"type\":\"1\",\"limit\":\"30\"}md5forencrypt",
+      "digest": "b24844e3e1b71f89f666bcac0929ac8c",
+      "digestLength": 32
+    }
+  },
+  "eapi": {
+    "search_simple": {
+      "url": "/api/search/get",
+      "data": {
+        "s": "test",
+        "type": "1",
+        "limit": "30"
+      },
+      "params": "1AF0E93B0E3EA03CE4E7F1B6AD7BD32BC198D7B70109AB343E0FC0C4A8F27C96EE4987D6B298277454C58B7438307129B3B1E3A856CDDEA303302F49022EC7E6B94D7C60FFDD44B89E17FCFDCB425D3070F20BC6F8912EBDC4A483D9E3ED64E17115BEF065B4EFDD6E698FE5B700F9AA",
+      "paramsLength": 224,
+      "decryptedStructure": "/api/search/get-36cd479b6b5-{\"s\":\"test\",\"type\":\"1\",\"limit\":\"30\"}-36cd479b6b5-047446cca5a7313b1653933a331667a4"
+    },
+    "search_chinese": {
+      "url": "/api/search/get",
+      "data": {
+        "s": "周杰伦",
+        "type": "1",
+        "limit": "30"
+      },
+      "params": "1AF0E93B0E3EA03CE4E7F1B6AD7BD32BC198D7B70109AB343E0FC0C4A8F27C961571CE0B0B83772535D0B42745D985CD694CC3AF27B4CF8C09605F910AA9B743C8AAFD7E85BC658CDC212C7A07371B3DBA459F81172601B1CDC754B502E83B9F22EDC6820ACA8452869006903F8F603B28848C80307911C5108D245ABF016B3C",
+      "paramsLength": 256,
+      "decryptedStructure": "/api/search/get-36cd479b6b5-{\"s\":\"周杰伦\",\"type\":\"1\",\"limit\":\"30\"}-36cd479b6b5-b24844e3e1b71f89f666bcac0929ac8c"
+    },
+    "login_qr_key": {
+      "url": "/api/login/qrcode/unikey",
+      "data": {
+        "type": "3"
+      },
+      "params": "1CA81A97B7BAEB099F29A9B99A25CD6E58E7BA5B35F25231033065C776830C0ABBBC72845BFB6CD868F6F9B7CBD2746DF59D3614BB3D33D8D3C02F073E47B374D7CA311CE3B46AC3C09B5B3F9361AAB2B29BE5508A1F6EDB199EDB363DB39B87",
+      "paramsLength": 192,
+      "decryptedStructure": "/api/login/qrcode/unikey-36cd479b6b5-{\"type\":\"3\"}-36cd479b6b5-ad3d6ecbe7337462f05a2f818635a221"
+    },
+    "login_qr_check": {
+      "url": "/api/login/qrcode/client/login",
+      "data": {
+        "key": "test-unikey-123",
+        "type": "3"
+      },
+      "params": "1CA81A97B7BAEB099F29A9B99A25CD6EEB07A96476EBB336CC9DE7F57581855B8F776DF5B44425C82267FA8FD6FCF4D55ECBEB03320512080FEDD0F562467076FDC7520391DD9735312613A9B2E91BB38AC3DA7E34BB4F3FBD701CE58E4CACC234F3A33E205A58BD80777889F9BEFAC704DD65607198A6FA5094F9C6EF773F49",
+      "paramsLength": 256,
+      "decryptedStructure": "/api/login/qrcode/client/login-36cd479b6b5-{\"key\":\"test-unikey-123\",\"type\":\"3\"}-36cd479b6b5-3b0fdb4c58b115b43ae52df1d48f702d"
+    },
+    "song_detail": {
+      "url": "/api/v3/song/detail",
+      "data": {
+        "c": "[{\"id\":186016}]"
+      },
+      "params": "11675D69CF25E0559750EF4BF81ECC680607C372872A3914F346ED123220A487D1D3764D2399095F2190002208159F1484E585A21354B38E006EA081245526D3D01E531794DE94BA0B3B7761B0EDA234304D3813135760AE17AF80876D7F1218EEEF3F2EE2778D601ACDC16485C01626",
+      "paramsLength": 224,
+      "decryptedStructure": "/api/v3/song/detail-36cd479b6b5-{\"c\":\"[{\\\"id\\\":186016}]\"}-36cd479b6b5-7f779bb96e16af1842c90a1a7c0836c3"
+    },
+    "playlist_detail": {
+      "url": "/api/v6/playlist/detail",
+      "data": {
+        "id": "3778678",
+        "n": "10",
+        "s": "0"
+      },
+      "params": "9E44C61C7604F33F328DE9633B8B0E69E14D621EB896C63E8E0FBC1DFA867E565C8D35F127FBF70066280EE41ADA1B375EA9B39F060D3A4E61681F6A51250E3A7225A46D58F74CED691B162423BD5EF281CDB8A3D17C8A9F6F4110C14506CC6D8DD9602115DA9C3DE2A5B40B6F6A29882ADB721DADB6FFA38022F1D2752815AC",
+      "paramsLength": 256,
+      "decryptedStructure": "/api/v6/playlist/detail-36cd479b6b5-{\"id\":\"3778678\",\"n\":\"10\",\"s\":\"0\"}-36cd479b6b5-391d8ed7ba90da7613d98f80a5dc7d1f"
+    },
+    "lyric": {
+      "url": "/api/song/lyric",
+      "data": {
+        "id": "186016"
+      },
+      "params": "9B1595479B79266065903BA79E9883029338432CD7D98D1A3626E997A2C531212685AF3432DD28C99651DAA533698C5CBC6AB84A3E561E0B108139D98B247A492807CB4A84FA34131D879CD5528AAED538D7AE18262DD4D5FABB1FA8F74167FE",
+      "paramsLength": 192,
+      "decryptedStructure": "/api/song/lyric-36cd479b6b5-{\"id\":\"186016\"}-36cd479b6b5-e9cf010917037511307852a2b35db292"
+    },
+    "empty_object": {
+      "url": "/api/test",
+      "data": {},
+      "params": "4DC723619A991588865191FD2F319BAD89A665F3FF2B75B10678911D4E9910E4690E5F68E0095E53773148F1312770C2786A0951D5B32887C8AE362CEF057841F3A83A42DA35956C149F335E924490D4",
+      "paramsLength": 160,
+      "decryptedStructure": "/api/test-36cd479b6b5-{}-36cd479b6b5-c1dd4daa38f3cefe4225a83266b65a9d"
+    }
+  },
+  "weapi": {
+    "login_cellphone": {
+      "data": {
+        "phone": "13800138000",
+        "password": "abc123",
+        "rememberLogin": "true"
+      },
+      "plaintext": "{\"phone\":\"13800138000\",\"password\":\"abc123\",\"rememberLogin\":\"true\"}",
+      "layer1_base64": "8XeIeTgD81Wv6aHxYbjWB7CE5eZ6iJhbDn12CPqFVbTNAdrih0D0E9A4zKaE0ihP8ycy2xh7MIbpR9DxhHFHOTAfw1wqlAew/IM/fQuiOQY=",
+      "layer2_base64": "TA3gMOtmjjB+lqvD9Gx+zc/uwpJViC2KfmqWdNB9TWc8Y4hnWkIHgaoTS6dk2I/0z1MfWWNGnyr4lXo75538CcXnhBZkIRwwSF197uYOOF2memSyVYIqag43pM5Mk3RysoGtlgp31aJ3Xkg+Mfc2cA==",
+      "secretKey": "gZ6cbdVK4WumqW8j",
+      "secretKeyReversed": "j8WqmuW4KVdbc6Zg",
+      "params": "TA3gMOtmjjB+lqvD9Gx+zc/uwpJViC2KfmqWdNB9TWc8Y4hnWkIHgaoTS6dk2I/0z1MfWWNGnyr4lXo75538CcXnhBZkIRwwSF197uYOOF2memSyVYIqag43pM5Mk3RysoGtlgp31aJ3Xkg+Mfc2cA==",
+      "paramsLength": 152,
+      "encSecKey": "54bc4d149253ef84207e4f95898bd057ef41b4ead78d50bb0a1fad7de7492683029b889077ec7543fd6f317e4a27aea16aa23e5cd0e8ae432724b0c21321b532873850c9ce60d28c4b6e45323d5887a619bd1f2b51b806e957775b5d735c968c8650fae624a96989760059b775feb009fea30225bc243b7ae1b7df4fddb72d86",
+      "encSecKeyLength": 256,
+      "paramsMatchLayer2": true
+    },
+    "login_status": {
+      "data": {},
+      "plaintext": "{}",
+      "layer1_base64": "O2O2Ra1D9ZP4VizNG8v1+A==",
+      "layer2_base64": "TPA7zlw869xE7Tuqk/vrxDiHBaNxo+AoUXoA01so+ZU=",
+      "secretKey": "gZ6cbdVK4WumqW8j",
+      "secretKeyReversed": "j8WqmuW4KVdbc6Zg",
+      "params": "TPA7zlw869xE7Tuqk/vrxDiHBaNxo+AoUXoA01so+ZU=",
+      "paramsLength": 44,
+      "encSecKey": "54bc4d149253ef84207e4f95898bd057ef41b4ead78d50bb0a1fad7de7492683029b889077ec7543fd6f317e4a27aea16aa23e5cd0e8ae432724b0c21321b532873850c9ce60d28c4b6e45323d5887a619bd1f2b51b806e957775b5d735c968c8650fae624a96989760059b775feb009fea30225bc243b7ae1b7df4fddb72d86",
+      "encSecKeyLength": 256,
+      "paramsMatchLayer2": true
+    },
+    "user_playlist": {
+      "data": {
+        "uid": "12345",
+        "limit": "30",
+        "offset": "0"
+      },
+      "plaintext": "{\"uid\":\"12345\",\"limit\":\"30\",\"offset\":\"0\"}",
+      "layer1_base64": "TO8qVgGvgh13K5Uq7zr1YjwYn7PdQuhCHEhyOW41dAecjd67Dby8+OiQGyujicE+",
+      "layer2_base64": "DsmfuWwxDzuPqiYWXZDXMvhk2lAdaG44w2yhYAmxlRKSnrhKnkxY302I+bE2HCCjL8tPjRWXccbyw1CPfLUBDh++LOxs9+klj39baVwhghs=",
+      "secretKey": "gZ6cbdVK4WumqW8j",
+      "secretKeyReversed": "j8WqmuW4KVdbc6Zg",
+      "params": "DsmfuWwxDzuPqiYWXZDXMvhk2lAdaG44w2yhYAmxlRKSnrhKnkxY302I+bE2HCCjL8tPjRWXccbyw1CPfLUBDh++LOxs9+klj39baVwhghs=",
+      "paramsLength": 108,
+      "encSecKey": "54bc4d149253ef84207e4f95898bd057ef41b4ead78d50bb0a1fad7de7492683029b889077ec7543fd6f317e4a27aea16aa23e5cd0e8ae432724b0c21321b532873850c9ce60d28c4b6e45323d5887a619bd1f2b51b806e957775b5d735c968c8650fae624a96989760059b775feb009fea30225bc243b7ae1b7df4fddb72d86",
+      "encSecKeyLength": 256,
+      "paramsMatchLayer2": true
+    },
+    "recommend_songs": {
+      "data": {},
+      "plaintext": "{}",
+      "layer1_base64": "O2O2Ra1D9ZP4VizNG8v1+A==",
+      "layer2_base64": "TPA7zlw869xE7Tuqk/vrxDiHBaNxo+AoUXoA01so+ZU=",
+      "secretKey": "gZ6cbdVK4WumqW8j",
+      "secretKeyReversed": "j8WqmuW4KVdbc6Zg",
+      "params": "TPA7zlw869xE7Tuqk/vrxDiHBaNxo+AoUXoA01so+ZU=",
+      "paramsLength": 44,
+      "encSecKey": "54bc4d149253ef84207e4f95898bd057ef41b4ead78d50bb0a1fad7de7492683029b889077ec7543fd6f317e4a27aea16aa23e5cd0e8ae432724b0c21321b532873850c9ce60d28c4b6e45323d5887a619bd1f2b51b806e957775b5d735c968c8650fae624a96989760059b775feb009fea30225bc243b7ae1b7df4fddb72d86",
+      "encSecKeyLength": 256,
+      "paramsMatchLayer2": true
+    }
+  },
+  "aes": {
+    "ecb_hello": {
+      "mode": "ECB",
+      "key": "e82ckenh8dichen8",
+      "plaintext": "hello world",
+      "ciphertextHex": "5AA3F15581585A4011834699FD2472E7",
+      "ciphertextLength": 32,
+      "decrypted": "hello world",
+      "roundtripOk": true,
+      "hexDecryptOk": true
+    },
+    "ecb_json": {
+      "mode": "ECB",
+      "key": "e82ckenh8dichen8",
+      "plaintext": "{\"a\":1}",
+      "ciphertextHex": "116F6861933BA5E1EEB93FDED1E7EBDC",
+      "ciphertextLength": 32,
+      "decrypted": "{\"a\":1}",
+      "roundtripOk": true,
+      "hexDecryptOk": true
+    },
+    "ecb_16bytes": {
+      "mode": "ECB",
+      "key": "e82ckenh8dichen8",
+      "plaintext": "0123456789ABCDEF",
+      "ciphertextHex": "FE614EFD00E31123BFEE7CB11DE0F41F6AA3B102FBE7296AB0DB9EA5C46AD12B",
+      "ciphertextLength": 64,
+      "decrypted": "0123456789ABCDEF",
+      "roundtripOk": true,
+      "hexDecryptOk": true
+    },
+    "ecb_eapi_data": {
+      "mode": "ECB",
+      "key": "e82ckenh8dichen8",
+      "plaintext": "/api/search/get-36cd479b6b5-{\"s\":\"test\",\"type\":\"1\",\"limit\":\"30\"}-36cd479b6b5-047446cca5a7313b1653933a331667a4",
+      "ciphertextHex": "1AF0E93B0E3EA03CE4E7F1B6AD7BD32BC198D7B70109AB343E0FC0C4A8F27C96EE4987D6B298277454C58B7438307129B3B1E3A856CDDEA303302F49022EC7E6B94D7C60FFDD44B89E17FCFDCB425D3070F20BC6F8912EBDC4A483D9E3ED64E17115BEF065B4EFDD6E698FE5B700F9AA",
+      "ciphertextLength": 224,
+      "decrypted": "/api/search/get-36cd479b6b5-{\"s\":\"test\",\"type\":\"1\",\"limit\":\"30\"}-36cd479b6b5-047446cca5a7313b1653933a331667a4",
+      "roundtripOk": true,
+      "hexDecryptOk": true
+    },
+    "cbc_hello": {
+      "mode": "CBC",
+      "key": "0CoJUm6Qyw8W8jud",
+      "iv": "0102030405060708",
+      "plaintext": "hello world",
+      "ciphertextBase64": "4DSisWgkBZuTDBMRpiz81g==",
+      "ciphertextBase64Alt": "4DSisWgkBZuTDBMRpiz81g==",
+      "decrypted": "hello world",
+      "roundtripOk": true
+    },
+    "cbc_json": {
+      "mode": "CBC",
+      "key": "0CoJUm6Qyw8W8jud",
+      "iv": "0102030405060708",
+      "plaintext": "{\"phone\":\"13800138000\",\"password\":\"abc123\"}",
+      "ciphertextBase64": "8XeIeTgD81Wv6aHxYbjWB7CE5eZ6iJhbDn12CPqFVbTVLzTdt7iAoxfqFRpNHYrx",
+      "ciphertextBase64Alt": "8XeIeTgD81Wv6aHxYbjWB7CE5eZ6iJhbDn12CPqFVbTVLzTdt7iAoxfqFRpNHYrx",
+      "decrypted": "{\"phone\":\"13800138000\",\"password\":\"abc123\"}",
+      "roundtripOk": true
+    },
+    "cbc_double": {
+      "mode": "CBC",
+      "key": "0CoJUm6Qyw8W8jud",
+      "iv": "0102030405060708",
+      "plaintext": "{\"phone\":\"13800138000\",\"password\":\"abc123\",\"rememberLogin\":\"true\"}",
+      "ciphertextBase64": "8XeIeTgD81Wv6aHxYbjWB7CE5eZ6iJhbDn12CPqFVbTNAdrih0D0E9A4zKaE0ihP8ycy2xh7MIbpR9DxhHFHOTAfw1wqlAew/IM/fQuiOQY=",
+      "ciphertextBase64Alt": "8XeIeTgD81Wv6aHxYbjWB7CE5eZ6iJhbDn12CPqFVbTNAdrih0D0E9A4zKaE0ihP8ycy2xh7MIbpR9DxhHFHOTAfw1wqlAew/IM/fQuiOQY=",
+      "decrypted": "{\"phone\":\"13800138000\",\"password\":\"abc123\",\"rememberLogin\":\"true\"}",
+      "roundtripOk": true
+    }
+  },
+  "rsa": {
+    "fixed_0": {
+      "input": "0123456789abcdef",
+      "inputLength": 16,
+      "encryptedHex": "ac744caab466f1fd5a75228365d15df7add288e8982a2c8f80da5f8f22d54834b5e1eab04dde9dac7341851a98de37463d8ba01d9e9c4d2c546c0f948e3163c667785a1b9c4f160305b0fb1ec3b698de0c704719b2fbc469582654b9c2595317dc40c3ecee32baa6d9753970b66667c01bde9ad34048fa8b2b0f628e56a5bf49",
+      "encryptedLength": 256,
+      "encryptedByteLength": 128
+    },
+    "fixed_1": {
+      "input": "abcdefghijklmnop",
+      "inputLength": 16,
+      "encryptedHex": "9df4b31c1c8a9336bae7b12d17bef2aaebff40f867b875935d4a5c4324593c87e63ee2489e2f463432ce71e5667a73ca3e26bad55eff852c86182cf4047933b257c6785254936cf2b7518a7067cf4d55aa1e48cd119db0c9dbd2d3adec41c94a711eae94578cea17a3d32e0005b4372b5d09d5700f23c5727a6a6fe89a03c869",
+      "encryptedLength": 256,
+      "encryptedByteLength": 128
+    }
+  }
+}

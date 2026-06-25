@@ -40,11 +40,31 @@
 Classicism/
 ├── README.MD                # 项目说明
 ├── DEVELOPMENT_PLAN.md      # 详细开发计划
+├── WORKLOG.md               # 工作日志
+├── app/                     # Flutter 应用（Android 目标）
+│   ├── pubspec.yaml         #   Dart 依赖
+│   ├── lib/
+│   │   ├── main.dart        #   入口（Material3 + Riverpod）
+│   │   ├── core/crypto/     #   加密层（⬅ Phase 1 完成）
+│   │   │   ├── constants.dart   # 所有密钥/域名/设备指纹常量
+│   │   │   ├── helpers.dart     # hex/base64/random 工具
+│   │   │   ├── eapi.dart        # MD5 + AES-128-ECB
+│   │   │   └── weapi.dart       # AES-128-CBC + RSA-1024 + ASN.1 DER
+│   │   ├── core/            #   （⬅ Phase 2）
+│   │   ├── api/             #   （⬅ Phase 3-4）
+│   │   ├── models/          #   数据模型骨架
+│   │   ├── services/        #   服务层骨架
+│   │   └── state/           #   状态管理骨架
+│   └── test/
+│       ├── golden_vectors.json      # 17 个黄金测试向量
+│       ├── eapi_test.dart           # 28 tests
+│       └── weapi_test.dart          # 18 tests
+├── scripts/
+│   └── gen_golden_vectors.js        # 黄金向量生成器
+├── test/
+│   └── golden_vectors.json          # 生成物（17 vectors）
 ├── interface.d.ts           # 完整 TypeScript 类型声明（Dart 模型参考）
 ├── package.json             # 上游项目依赖信息
-├── data/
-│   ├── china_ip_ranges.txt  # 中国IP CIDR范围（IP伪装参考）
-│   └── deviceid.txt         # 设备ID持久化参考
 ├── module/                  # 400+ API端点定义（移植参考）
 │   ├── login_cellphone.js   #   手机号登录 (weapi)
 │   ├── login_qr_key.js      #   QR登录-获取密钥 (eapi)
@@ -121,17 +141,20 @@ login_refresh() [eapi] ──→ 定期刷新token
 
 ## 依赖项
 
-### 生产依赖（Dart pub）
+### Flutter (Dart pub, resolved)
+| 包 | 版本 | 用途 |
+|---|---|---|
+| `dio` | 5.9.2 | HTTP 客户端 |
+| `pointycastle` | 3.9.1 | AES（CBC/ECB/GCM）+ RSA |
+| `crypto` | 3.0.7 | MD5 / HMAC-SHA256 |
+| `shared_preferences` | 2.5.5 | Cookie 持久化 |
+| `just_audio` | 0.9.46 | 音频播放 |
+| `qr_flutter` | 4.1.0 | QR码生成 |
+| `flutter_riverpod` | 2.6.1 | 状态管理 |
+| `json_annotation` | 4.12.0 | JSON 模型 |
+| `build_runner` | 2.15.0 | 代码生成 (dev) |
 
-| 包 | 用途 |
-|---|---|
-| `dio` | HTTP 客户端 |
-| `pointycastle` | AES / RSA 加密 |
-| `crypto` | MD5 / HMAC-SHA256 |
-| `shared_preferences` | Cookie / 持久化存储 |
-| `just_audio` | 音频播放 |
-| `qr_flutter` | QR码生成（登录页） |
-| `riverpod` | 状态管理 |
+**环境**：Flutter 3.41.6 · Dart SDK ^3.11.4 · Android (only)
 
 ### 云函数（仅 3 个端点）
 
@@ -147,12 +170,15 @@ login_refresh() [eapi] ──→ 定期刷新token
 
 详见 [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md)
 
-1. **Phase 1**：Dart 加密原语层（weapi / eapi）
-2. **Phase 2**：请求引擎 + Cookie 管理
-3. **Phase 3**：认证模块（登录/注册）
-4. **Phase 4**：核心业务接口（搜索/播放/歌单/歌词）
-5. **Phase 5**：Flutter UI + 播放器
-6. **Phase 6**：云函数部署
+| # | 阶段 | 状态 |
+|---|------|------|
+| 0 | 项目脚手架 & 常量定义 | ✅ |
+| 1 | Dart 加密原语层（weapi / eapi） | ✅ |
+| 2 | 请求引擎 + Cookie 管理 | ⬜ |
+| 3 | 认证模块（登录/注册） | ⬜ |
+| 4 | 核心业务接口（搜索/播放/歌单/歌词） | ⬜ |
+| 5 | Flutter UI + 播放器 | ⬜ |
+| 6 | 云函数部署 | ⬜ |
 
 ## 保密声明
 

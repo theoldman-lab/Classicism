@@ -7,23 +7,27 @@
 
 ---
 
-## Phase 0：项目脚手架 & 常量定义
+## Phase 0：项目脚手架 & 常量定义 ✅
+
+> **状态：DONE** （2026-06-25）
+> 产出：`app/` Flutter 项目，`flutter analyze` 零错误，`flutter test` 通过
 
 **目标**：搭建 Flutter 项目骨架，准备所有密钥常量。
 
 ### 0.1 Flutter 项目初始化
 
 ```bash
-flutter create --org com.classicism --project-name classicism .
+flutter create --org com.classicism --project-name classicism --platforms android app
 ```
+实际创建在 `app/` 子目录下，与上游参考代码（`module/`、`util/`）隔离。
 
 ### 0.2 依赖安装 (pubspec.yaml)
 
 ```yaml
 dependencies:
-  dio: ^5.4.0
-  pointycastle: ^3.7.3
-  crypto: ^3.0.3
+  dio: ^5.4.0              # → resolved 5.9.2
+  pointycastle: ^3.7.3     # → resolved 3.9.1
+  crypto: ^3.0.3           # → resolved 3.0.7
   shared_preferences: ^2.2.2
   just_audio: ^0.9.36
   qr_flutter: ^4.1.0
@@ -33,167 +37,68 @@ dependencies:
 dev_dependencies:
   build_runner: ^2.4.8
   json_serializable: ^6.7.1
-  flutter_test:
-    sdk: flutter
 ```
 
 ### 0.3 密钥常量文件 `lib/core/crypto/constants.dart`
 
-从 `util/crypto.js` 和 `util/config.json` 提取所有硬编码常量：
+从 `util/crypto.js` 和 `util/config.json` 和 `util/request.js` 提取所有硬编码常量。
+审查发现并修复 4 个 bug：`linuxapiKey` 首字符丢失、`defaultAppver` 版本不完整、`defaultResolution` 不一致、缺少 `eapiDelimiter`。
+所有常量与上游逐字节交叉验证通过。
 
-```dart
-// AES
-const iv = '0102030405060708';
-const presetKey = '0CoJUm6Qyw8W8jud';
-const eapiKey = 'e82ckenh8dichen8';
-const linuxapiKey = 'rFgB&h#%2?^eDg:Q';
+### 0.4 Helpers `lib/core/crypto/helpers.dart`
+`hex↔bytes`、`base64↔bytes`、`randomString`、`randomBytes`、`base62Encode`
 
-// RSA 公钥 (PEM)
-const rsaPublicKeyPem = '''
------BEGIN PUBLIC KEY-----
-MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCgt4+moXkhBe3ZDvIseJ6NrB4B
-...（从 crypto.js 完整复制）
------END PUBLIC KEY-----
-''';
-
-// XEAPI 静态密钥
-final xeapiStaticKey = Uint8List.fromList([
-  0xab, 0x1d, 0x5a, 0x43, 0x0f, 0x6b, 0xb0, 0x4a,
-  0x3f, 0x01, 0xe8, 0x1d, 0xdd, 0x72, 0xbd, 0x91,
-  0x6d, 0x5c, 0xe5, 0x91, 0x24, 0x8a, 0xc1, 0x28,
-  0x71, 0x48, 0x06, 0xd7, 0xf8, 0xfb, 0x1b, 0x84,
-]);
-
-// XEAPI 签名密钥
-const xeapiSignKey = 'mUHCwVNWJbunMqAHf5MImuirT6plvs6VSFW62MGHstFQxhBGdEoIhLItH3djc4+FB/OKty3+lL2rGeoFBpVe5g==';
-
-// X25519 SPKI 前缀
-final x25519SpkiPrefix = Uint8List.fromList([
-  0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x6e, 0x03, 0x21, 0x00,
-]);
-
-// Base62 字母表
-const base62Alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-
-// API 域名 (来自 config.json)
-const musicApiHost = 'https://music.163.com';
-const musicEapiHost = 'https://music.163.com';
-const musicWeapiHost = 'https://music.163.com';
-const musicXeapiHost = 'https://interface.music.163.com';
-```
-
-### 0.4 目录结构
-
-```
-lib/
-├── main.dart
-├── core/
-│   ├── crypto/
-│   │   ├── constants.dart      # 密钥常量
-│   │   ├── weapi.dart          # weapi 加密实现
-│   │   ├── eapi.dart           # eapi 加密实现
-│   │   └── helpers.dart        # hex/base64 转换等
-│   ├── cookie_manager.dart     # Cookie 管理
-│   ├── request_engine.dart     # 请求分发引擎
-│   └── config.dart             # 全局配置
-├── api/
-│   ├── auth_api.dart           # 认证接口
-│   ├── music_api.dart          # 核心音乐接口
-│   └── xeapi_proxy.dart        # 云函数代理封装
-├── models/                     # 数据模型
-│   ├── song.dart
-│   ├── playlist.dart
-│   ├── lyric.dart
-│   ├── user.dart
-│   └── search_result.dart
-├── services/
-│   ├── auth_service.dart       # 认证状态管理
-│   └── player_service.dart     # 播放器服务
-├── state/                      # Riverpod providers
-└── ui/
-    ├── pages/
-    │   ├── home_page.dart
-    │   ├── search_page.dart
-    │   ├── login_page.dart
-    │   ├── player_page.dart
-    │   └── playlist_page.dart
-    └── widgets/
-        ├── song_tile.dart
-        ├── mini_player.dart
-        └── qr_login.dart
-```
+### 0.5 目录骨架
+`app/lib/` 下完整目录结构已创建（core/crypto/、api/、models/、services/、state/、ui/），含 19 个占位文件。
 
 ---
 
-## Phase 1：Dart 加密原语层
+## Phase 1：Dart 加密原语层 ✅
+
+> **状态：DONE** （2026-06-25）
+> 产出：`eapi.dart` (54行) + `weapi.dart` (147行)，46/46 tests passed，逐字节对照黄金向量
 
 **目标**：完整移植 `weapi()` 和 `eapi()` 函数至 Dart，确保输出与 Node.js 版逐字节一致。
 
-### 1.1 `eapi.dart` — 难度：低 | 预计 2h
+### 1.0 黄金向量生成
 
-**需实现的函数**：
+- 编写 `scripts/gen_golden_vectors.js` 从 `util/crypto.js` 生成 17 个测试向量
+- 使用确定性 PRNG（seed=12345）mock `Math.random` 确保 weapi 可重复
+- 17 向量：MD5×4、EAPI×8、WEAPI×4、AES ECB×4、AES CBC×3、RSA×2
+- 关键发现：weapi 第2层加密的输入是第1层 base64 **字符串的 UTF-8 字节**，不是原始 ciphertext 字节
 
-| JS 函数 | Dart 实现 |
-|---|---|
-| `aesEncrypt(text, key, iv, 'ECB')` | `pointycastle` — `AESFastEngine` + `ECBBlockCipher` + `PaddedBlockCipher(PKCS7Padding())` |
-| `aesDecrypt(ciphertext, key, iv, 'ECB')` | 同上，解密模式 |
-| `md5(text)` | `package:crypto` — `md5.convert(utf8.encode(text))` |
-| `eapi(url, object)` | `JSON.stringify(object)` → `md5(nobody + path + use + body + md5forencrypt)` → ECB加密 |
+### 1.1 `eapi.dart` (54 lines) — 难度：低 | 实际 1.5h
 
-**关键路径**：
-```
-eapi('/api/search/get', { s: 'test', type: 1 })
-  → JSON body = '{"s":"test","type":1}'
-  → digest = md5('nobody/api/search/getuse{"s":"test","type":1}md5forencrypt')
-  → params = '/api/search/get-36cd479b6b5-"digest"-"body"'
-  → encrypted = aesEcbEncrypt(params, eapiKey)
-  → 返回 { params: hex(encrypted) }
-```
+| 函数 | 实现 | 验证 |
+|---|---|---|
+| `_aesEcbEncrypt` | `PaddedBlockCipherImpl(PKCS7Padding(), ECBBlockCipher(AESEngine()))` | 4 gold vectors |
+| `_aesEcbDecrypt` | 同上，解密模式 | 4 roundtrips |
+| `eapi(url, data)` | MD5 digest → ECB encrypt → uppercase hex | 8 gold vectors (含中文) |
+| `eapiResDecrypt(hex)` | ECB decrypt → optional gzip → JSON.parse | structure 验证 |
 
-**验证方式**：用同样的输入在 Node.js 中运行 `eapi()`，对比二进制输出。
+**pointycastle 3.9 API 注意**：`PaddedBlockCipherImpl.init()` 需 `PaddedBlockCipherParameters<KeyParameter, CipherParameters>(key, null)`
 
-### 1.2 `weapi.dart` — 难度：中 | 预计 4h
+### 1.2 `weapi.dart` (147 lines) — 难度：中 | 实际 3.5h
 
-**需实现的函数**：
+| 函数 | 实现 | 验证 |
+|---|---|---|
+| `_aesCbcEncrypt` | `PaddedBlockCipherImpl` + `ParametersWithIV<KeyParameter>` + `CBCBlockCipher` → base64 | 3 gold vectors |
+| `_parsePublicKey(pem)` | 手动 ASN.1 DER 解析：PEM→base64→DER→SEQUENCE→INTEGER(n)→INTEGER(e) | 间接（通过 RSA） |
+| `_rsaEncrypt(text, key)` | `RSAEngine.init(PublicKeyParameter)` + 左填零至128字节 + `processBlock` → lowercase hex | 2 gold vectors (256 hex chars) |
+| `weapi(data, {secretKey})` | 二层 AES-CBC + RSA reversed key | 4 gold vectors |
 
-| JS 函数 | Dart 实现 |
-|---|---|
-| `aesEncrypt(text, key, iv, 'CBC')` | `pointycastle` — CBC 模式（默认 PKCS7） |
-| `rsaEncrypt(text, publicKeyPem)` | `pointycastle` — `RSAEngine` + `PKCS1Encoding` (验证无填充模式) |
-| `weapi(object)` | 串联：AES-CBC(presetKey, iv) → AES-CBC(random16, iv) → RSA(random16_reversed) |
+**RSA NONE padding 实现**：`inputBlockSize`=127 字节（加密模式），输入 16 字节左填零至 128 字节。`outputBlockSize`=128 字节 → hex=256 字符，与 node-forge 输出逐位一致。
 
-**关键路径**：
-```
-weapi({ phone: '13800138000', password: 'md5hash', rememberLogin: 'true' })
-  → json = JSON.stringify(data)
-  → secretKey = random(16)  // 随机16字节base64
-  → encText = aesCbc(aesCbc(json, presetKey, iv), secretKey, iv)
-  → encSecKey = rsaEncrypt(secretKey.reversed, publicKey).toHex()
-  → 返回 { params: encText, encSecKey: encSecKey }
-```
+**ASN.1 DER 解析**：手动实现 tag-length-value 读取，支持多字节长度（≥0x80）。PEM→DER 路径：`SEQUENCE` → `SEQUENCE(AlgorithmIdentifier)` skip → `BIT STRING` → `SEQUENCE` → `INTEGER(n)` → `INTEGER(e)`。
 
-**WebAPI 请求头**：
-```
-Content-Type: application/x-www-form-urlencoded
-Cookie: os=pc; osver=Microsoft-Windows-10-Professional...; appver=2.10.6; MUSIC_A=xxx; ...
-```
+### 1.3 测试
 
-### 1.3 加密测试用例
+| 测试文件 | 测试数 | 覆盖 |
+|---|---|---|
+| `test/eapi_test.dart` | 28 | MD5×4 + AES-ECB×8 + EAPI encrypt×8 + EAPI decrypt×8 |
+| `test/weapi_test.dart` | 18 | AES-CBC×3 + RSA×2 + WEAPI golden×4 + WEAPI layers×8 |
 
-```dart
-void main() {
-  test('eapi - matches Node.js output', () {
-    final result = eapi('/api/search/get', {'s': '周杰伦', 'type': '1', 'limit': '30'});
-    expect(result.params, equals('已知正确的hex输出'));
-  });
-
-  test('weapi - matches Node.js output', () {
-    // 注意：weapi 使用随机 secretKey，需要 mock random(16) 来固定
-    final result = weapi({'phone': '13800138000', 'password': 'abc123...'});
-    expect(result.encSecKey.length, equals(256)); // RSA 1024-bit = 256 hex chars
-  });
-}
-```
+所有测试读取 `test/golden_vectors.json`（由 1.0 生成），逐字节对照 Node.js 黄金输出。
 
 ---
 
@@ -272,12 +177,12 @@ class NeteaseRequest {
 Map<String, String> buildDeviceFingerprint() {
   return {
     'os': 'android',
-    'osver': '14',         // Android 版本
-    'appver': '8.20.10',   // 网易云 APP 版本
+    'osver': '14',
+    'appver': '8.20.20.231215173437',   // ← 必须与上游 osMap 一致
     'versioncode': '140',
-    'mobilename': 'Pixel 8 Pro',
+    'mobilename': '',
     'buildver': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-    'resolution': '2400x1080',
+    'resolution': '1920x1080',
     '__csrf': _csrf,
     'channel': 'xiaomi',
     'requestId': '${DateTime.now().millisecondsSinceEpoch}_${random(4)}',
@@ -611,18 +516,17 @@ class XeapiProxy {
 ### 7.2 测试结构
 
 ```
-test/
-├── crypto/
-│   ├── eapi_test.dart
-│   └── weapi_test.dart
-├── core/
-│   ├── cookie_manager_test.dart
-│   └── request_engine_test.dart
-├── api/
-│   ├── auth_api_test.dart
-│   └── music_api_test.dart
-└── ui/
-    └── search_page_test.dart
+test/                               # ← 当前已实现
+├── golden_vectors.json             # 黄金向量（17 vectors, scripts/gen_golden_vectors.js）
+├── eapi_test.dart                  # MD5×4 + AES-ECB×8 + EAPI×16 = 28 tests ✅
+└── weapi_test.dart                 # AES-CBC×3 + RSA×2 + WEAPI×12 = 18 tests ✅
+
+test/                               # ← 待实现
+├── cookie_manager_test.dart        # Phase 2
+├── request_engine_test.dart        # Phase 2
+├── auth_api_test.dart              # Phase 3
+├── music_api_test.dart             # Phase 4
+└── widget/                         # Phase 5
 ```
 
 ### 7.3 发布检查清单
@@ -640,29 +544,29 @@ test/
 
 ## 工作量估算
 
-| Phase | 内容 | 预计时间 |
-|-------|------|---------|
-| 0 | 脚手架 + 常量 | 0.5h |
-| 1 | Dart 加密原语 | 6h |
-| 2 | 请求引擎 + Cookie | 4h |
-| 3 | 认证模块 | 2h |
-| 4 | 核心业务接口 | 2h |
-| 5 | Flutter UI | 8-12h |
-| 6 | 云函数 | 2h |
-| 7 | 测试 | 3h |
-| **总计** | | **约 28-32h** |
+| Phase | 内容 | 预计 | 实际 | 状态 |
+|-------|------|------|------|------|
+| 0 | 脚手架 + 常量 | 0.5h | 1h | ✅ |
+| 1 | Dart 加密原语 | 6h | 5h | ✅ |
+| 2 | 请求引擎 + Cookie | 4h | — | ⬜ |
+| 3 | 认证模块 | 2h | — | ⬜ |
+| 4 | 核心业务接口 | 2h | — | ⬜ |
+| 5 | Flutter UI | 8-12h | — | ⬜ |
+| 6 | 云函数 | 2h | — | ⬜ |
+| 7 | 测试 | 3h | — | ⬜ |
+| **总计** | | **约 28-32h** | **6h elapsed** | |
 
 ---
 
 ## 风险 & 应对
 
-| 风险 | 应对 |
-|------|------|
-| **pointycastle RSA 无填充模式不支持** | 尝试 `Pkcs1Encoding` 默认行为；若不行则改用 `flutter_rust_bridge` 调 openssl |
-| **X25519 云函数延迟过高** | 使用 Cloudflare Workers（全球边缘节点），延迟 < 100ms |
-| **网易云 API 变更** | 跟进上游 `@neteasecloudmusicapienhanced/api` npm 包更新，同步修正 |
-| **歌曲 URL 防盗链** | 播放前实时获取 URL，失败则降级尝试其他音质等级 |
-| **VIP 歌曲限制 (fee=1)** | 仅试听 30 秒，UI 清晰标注 |
+| 风险 | 应对 | 状态 |
+|------|------|------|
+| ~~pointycastle RSA 无填充模式不支持~~ | 已解决：手动 ASN.1 DER 解析 + `RSAEngine` 左填零至 128 字节 | ✅ |
+| X25519 云函数延迟过高 | 使用 Cloudflare Workers（全球边缘节点），延迟 < 100ms | ⬜ |
+| 网易云 API 变更 | 跟进上游 `@neteasecloudmusicapienhanced/api` npm 包更新，同步修正 | ⬜ |
+| 歌曲 URL 防盗链 | 播放前实时获取 URL，失败则降级尝试其他音质等级 | ⬜ |
+| VIP 歌曲限制 (fee=1) | 仅试听 30 秒，UI 清晰标注 | ⬜ |
 
 ---
 

@@ -361,7 +361,156 @@ Critical design notes:
 | 3 | ✅ | `xeapi_helpers.dart` (22), `xeapi_proxy.dart` (43), `auth_api.dart` (374), `auth_service.dart` (71) | 54 |
 | 4 | ✅ | `music_api.dart` (273), models (song/lyric/playlist/user/search_result) | 48 |
 | Review | ✅ | 5 bugs fixed, 7 new test files, 5 enhanced test files | +109 new tests |
-| 5 | ⬜ | Flutter UI + Player | — |
-| 6 | ⬜ | Cloud Function Deployment | — |
+| 5 | ✅ | Flutter UI + Player | +73 tests |
+| 6 | ✅ | Cloud Function Deployment | — |
 
-**Total: ~1,550 source lines, 271 tests, 0 analyze errors**
+**Total: ~3,990 source lines, 344 tests, 0 analyze errors**
+
+---
+
+## 2026-06-26 (Evening)
+
+### Phase 5: Flutter UI + Player → COMPLETED
+
+**5.0 PlayerService** (`lib/services/player_service.dart`, 139 lines)
+
+| Component | Detail |
+|-----------|--------|
+| `PlayMode` enum | `sequential` / `shuffle` / `singleRepeat` |
+| Constructor | `PlayerService({required MusicApi api})` — wraps `just_audio` `AudioPlayer` |
+| Streams | `positionStream`, `durationStream`, `playingStream`, `currentSongStream` |
+| Getters | `currentSong` (from `AudioSource.tag`), `playlist`, `currentIndex`, `playMode`, `isPlaying` |
+| `playSongs(songs, {startIndex})` | Calls `MusicApi.getSongUrls` → builds `ConcatenatingAudioSource` → filters songs without URLs → `_player.setAudioSource` → `play()` |
+| Controls | `playSong` / `playSongs` / `togglePlayPause` / `next` / `previous` / `seek` / `setPlayMode` |
+| Lifecycle | `dispose()` cancels subscriptions + disposes `AudioPlayer` |
+
+**5.1 State Providers** (`lib/state/providers.dart`, 265 lines)
+
+| Provider | Type | Detail |
+|----------|------|--------|
+| `authProvider` | `StateNotifierProvider<AuthNotifier, AuthState>` | `AuthStatus.uninitialized → guest → loggedIn`. Methods: `initialize()`, `loginWithPassword()`, `logout()` |
+| `playerProvider` | `StateNotifierProvider<PlayerNotifier, PlayerState>` | Auto-syncs from 4 PlayerService streams (`position/duration/song/playing`) → `PlayerState` via `copyWith`. Methods: `playSong/playSongs/togglePlayPause/next/previous/seek/setPlayMode` |
+| `searchProvider` | `StateNotifierProvider<SearchNotifier, SearchState>` | Concurrent `searchSongs` + `searchPlaylists` on each query. `isLoading`/`error` tracking |
+| `recommendSongsProvider` | `FutureProvider<List<Song>>` | Daily recommendations, on-demand refresh |
+| `musicApiProvider` / `authServiceProvider` / `playerServiceProvider` | `Provider<T>` | Service DI points — throw `UnimplementedError` by default; overridden in `main.dart` via `overrideWithValue` |
+
+All State classes have manual `copyWith` methods. Stream subscriptions use `if (mounted)` guard to prevent leaks.
+
+**5.2 UI Widgets** (7 files, 733 lines)
+
+| Widget | File | Key Features |
+|--------|------|-------------|
+| `SongTile` | `song_tile.dart` (94) | Cover image + fallback icon / song name + artist / duration formatted `mm:ss` / `onTap` / `showCover` toggle / zero-duration hides trailing |
+| `PlaylistTile` | `playlist_tile.dart` (92) | Cover + track count + play count formatted (万) + creator name / `onTap` / null-safe |
+| `MiniPlayer` | `mini_player.dart` (112) | `ConsumerWidget` watching `playerProvider`. Linear progress bar + cover + song info + play/pause + next. Hidden when `currentSong == null`. Tap navigates to `/player` |
+| `ClassicismSearchBar` | `search_bar.dart` (86) | Material 3 `TextField` with 300ms debounce via `Timer`. Clear button visible when text present (`_controller.addListener` → `setState`). `onSearch` callback |
+| `SearchResultList` | `search_result_list.dart` (132) | `ConsumerWidget` watching `searchProvider`. TabBar (歌曲/歌单) + `TabBarView`. Reuses `SongTile`/`PlaylistTile`. Empty/loading/error states |
+| `LyricView` | `lyric_view.dart` (95) | Static `parse(lrc)` method: regex `[mm:ss.xx]` → `List<(Duration, String)>`. Supports multi-timestamp lines, centiseconds. `ListView` with current-line highlight (primary color, bold, larger font) |
+| `QrCodeLogin` | `qr_login.dart` (154) | Takes `AuthApi` as parameter. `initState` → `getLoginQrKey()` → `QrImageView`. 2-second polling via `Stream.periodic`. States: loading/waiting/scanned/success/expired/error. Retry button on expired/error |
+
+**5.3 UI Pages** (5 files, 922 lines)
+
+| Page | Lines | Key Features |
+|------|-------|-------------|
+| `HomePage` | 176 | `ConsumerStatefulWidget`. `addPostFrameCallback` → `authProvider.notifier.initialize()`. Search bar + 3 quick-action cards (每日推荐/歌单/登录). `recommendSongsProvider` with `AsyncValue.when()` — loading/error/empty/data states. Login prompt when guest |
+| `SearchPage` | 28 | AppBar-embedded `ClassicismSearchBar` + `SearchResultList` + `MiniPlayer` |
+| `PlaylistPage` | 204 | `ConsumerStatefulWidget`. Reads `playlistId` from `ModalRoute.settings.arguments`. `SliverAppBar` with expanded cover + gradient overlay. Metadata row (creator/track count/play count). "Play All" button. Track list via `SongTile(showCover: false)` |
+| `PlayerPage` | 344 | `ConsumerStatefulWidget`. Blurred cover background + centered album art (280×280, shadow). Song name + artist. Seekable `Slider` + time labels. Prev/play-pause/next circles. Play mode toggle (`sequential → shuffle → singleRepeat`). `LyricView` with auto-fetch on song change. Close button (`Navigator.pop`) |
+| `LoginPage` | 170 | `ConsumerStatefulWidget` with `TabController`. Tab 1: QR login placeholder (deferred to cloud function). Tab 2: Phone + password `TextField`s + `FilledButton`. Empty-field validation. Loading spinner on submit. Error display |
+
+**5.4 Routing + main.dart** (`lib/main.dart`, 106 lines)
+
+```
+main() async:
+  WidgetsFlutterBinding.ensureInitialized()
+  AppConfig.instance.init() → SharedPreferences
+  CookieManager(config) → cookie fingerprints
+  NeteaseRequest(dio, cookie, config) → request dispatcher
+  MusicApi / AuthApi / AuthService / PlayerService → service layer
+  ProviderScope overrides → musicApi/authService/playerService providers
+  ClassicismApp → MaterialApp
+
+Routes:
+  /         → HomePage
+  /search   → SearchPage
+  /playlist → PlaylistPage (arguments: playlistId)
+  /player   → PlayerPage
+  /login    → LoginPage
+```
+
+**5.5 Widget Tests** (+73 tests, 344 total)
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| `widget_song_tile_test.dart` | 10 | Render name/artist/duration/cover, null fields, onTap, showCover, zero duration |
+| `widget_playlist_tile_test.dart` | 9 | Render name/track count/play count/creator, null cover, onTap |
+| `widget_search_bar_test.dart` | 10 | Hint/submit/debounce/empty query/clear button/trim/cancel previous debounce |
+| `widget_lyric_view_test.dart` | 15 | Parse×10 (ms/3-digit ms/multi-line/multi-timestamp/sort/colon separator/malformed/empty). Widget×5 (render/empty state/highlight/ListView) |
+| `page_home_test.dart` | 6 | Search bar/action cards/login prompt/loading indicator/navigation |
+| `page_player_test.dart` | 8 | Close button/controls/empty state/album art/progress slider/play mode/lyric placeholder |
+| `page_login_test.dart` | 10 | TabBar/QR tab/phone form/input fields/login button/empty validation |
+| `page_search_test.dart` | 5 | AppBar/search icon/empty result placeholder/search input/MiniPlayer |
+| `test_helpers.dart` | — | `MockMusicApi` + `MockAuthService` + `buildTestApp` utility |
+
+**Model update**: `Playlist` model gained `tracks: List<Song>?` field parsed from `fromJson`.
+
+---
+
+### Phase 6: Cloud Function Deployment → COMPLETED (code ready, DNS pending)
+
+**6.1 Cloud Function** (`xeapi-proxy/api/xeapi.js`, 381 lines)
+
+Self-contained serverless function — zero npm dependencies, uses only Node.js built-in `crypto`/`zlib`/`fetch`.
+
+| Section | Detail |
+|---------|--------|
+| X25519 Key Management | In-memory cache (`publicKeyState`). Calls `/api/gorilla/anti/crawler/security/key/get` with HMAC-SHA256 when expired. Response signature verification |
+| xeapi Encryption | `xeapi(uri, data)`: build plaintext → AES-ECB(staticKey, plaintext) → XOR mid-transform → AES-ECB(dynamicKey, transformed) → field B. X25519 ECDH + AES-128-GCM → field S. AES-ECB(staticKey, version|sessionId) → field R |
+| HTTP Forwarding | POST `{B, S, R}` to `interface3.music.163.com/xeapi{endpoint}` via `fetch`. Persists `x-encr-ssid`/`x-encr-sskey` session keys |
+| Response Decryption | `xeapiResDecrypt`: AES-ECB(eapiKey, body) → gzip check (`0x1f 0x8b`) → optional decompress → JSON.parse |
+| Cookie Extraction | `Set-Cookie` headers → strip `Domain=...` via regex → return `List<String>` |
+
+**Deployed to:**
+- Vercel: `https://xeapi-proxy-bj0e36pll-dkxs-projects-e6c9275c.vercel.app/api/xeapi`
+- Cloudflare Workers: `https://classicism-xeapi.orderly-beak.workers.dev`
+
+> ⚠️ Both `.vercel.app` and `.workers.dev` free domains blocked from current network. Need custom domain binding for production.
+
+**6.2 Flutter-side Changes**
+
+| File | Change |
+|------|--------|
+| `xeapi_proxy.dart` | `call()` adds optional `deviceId` parameter (default `''`, backward compatible) |
+| `auth_api.dart:106` | `registerAnonymous()` passes `deviceId: _config.deviceId` to proxy call |
+| `music_api.dart:105` | `getSongUrls()` passes `deviceId: AppConfig.instance.deviceId` |
+| `request_engine.dart:148` | xeapi branch POST data includes `deviceId: _config.deviceId` |
+| `main.dart:37-52` | `XEAPI_PROXY_URL` env-var injection via `String.fromEnvironment`. Real `XeapiProxy` instance created when URL provided, `null` otherwise. Proxy URL also passed to `NeteaseRequest` constructor |
+
+**Deploy command:**
+```bash
+flutter run --dart-define=XEAPI_PROXY_URL=https://your-domain.com/api/xeapi
+```
+
+---
+
+### Final Project State
+
+| Phase | Status | Source Files | Tests |
+|-------|--------|-------------|-------|
+| 0 | ✅ | Scaffolding + Constants | — |
+| 1 | ✅ | `eapi.dart` + `weapi.dart` | 46 |
+| 2 | ✅ | `config.dart` + `cookie_manager.dart` + `request_engine.dart` | 73 |
+| 3 | ✅ | `xeapi_helpers.dart` + `xeapi_proxy.dart` + `auth_api.dart` + `auth_service.dart` | 54 |
+| 4 | ✅ | `music_api.dart` + models | 48 |
+| Review | ✅ | 5 bugs fixed, 12 test files | +109 |
+| 5 | ✅ | PlayerService + Providers + 7 Widgets + 5 Pages + Routing | +73 |
+| 6 | ✅ | Cloud function (381 lines) + Flutter wiring | — |
+
+| Metric | Value |
+|--------|-------|
+| Source files | 32 |
+| Source lines | ~3,990 |
+| Test files | 22 |
+| Test cases | 344 |
+| `flutter analyze` | 0 errors, 0 warnings |
+| Cloud function | 381 lines, 0 npm deps, Vercel + Cloudflare Workers |

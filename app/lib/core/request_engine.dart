@@ -145,6 +145,7 @@ class NeteaseRequest {
             'endpoint': endpoint,
             'data': reqData,
             'cookie': CookieManager.cookieObjToString(cookieMap),
+            'deviceId': _config.deviceId,
           },
           options: Options(responseType: ResponseType.json),
         );

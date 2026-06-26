@@ -255,147 +255,171 @@ dev_dependencies:
 > - `getArtistTopSongs` 加密方案从 eapi 改为 **weapi**（上游 `artist_top_song.js` 使用 `createOption(query, 'weapi')`）；
 >   端点从 `/api/v1/artist/songs` 改为 `/api/artist/top/song`（上游实际端点）
 
-## Phase 5：Flutter UI + 播放器
+## Phase 5：Flutter UI + 播放器 ✅
 
-### 5.1 页面路由
+> **状态：DONE** （2026-06-26 Evening）
+> 产出：PlayerService (139行) + Providers (265行) + 7 Widgets (733行) + 5 Pages (922行) + Routing，+73 测试
 
-```
-/          → HomePage      (推荐 + 快捷入口)
-/search    → SearchPage    (搜索)
-/playlist  → PlaylistPage  (歌单详情)
-/player    → PlayerPage    (全屏播放器 + 歌词)
-/login     → LoginPage     (QR码 + 手机号登录)
-```
+**目标**：实现完整的 Material 3 播放器 UI，含 5 个页面、7 个可复用组件、Riverpod 状态管理、`just_audio` 音频播放。
 
-### 5.2 核心组件
+### 5.0 PlayerService (`lib/services/player_service.dart`, 139 lines)
 
-| 组件 | 说明 |
+| 组件 | 实现 |
 |------|------|
-| `MiniPlayer` | 底部迷你播放条（常驻） |
-| `SongTile` | 歌曲列表项 |
-| `QrCodeLogin` | QR 码登录组件（含轮询） |
-| `LyricView` | 歌词滚动视图 |
-| `SearchBar` | 搜索输入框 + 热词 |
+| `PlayMode` enum | `sequential` / `shuffle` / `singleRepeat` |
+| 构造器 | `PlayerService({required MusicApi api})` — 创建 `AudioPlayer`，监听 `currentIndexStream` |
+| 流 | `positionStream` / `durationStream` / `playingStream` / `currentSongStream` (broadcast) |
+| `playSongs(songs, {startIndex})` | 实时调用 `MusicApi.getSongUrls` → 过滤无 URL 歌曲 → `ConcatenatingAudioSource` + `tag: Song` → `setAudioSource` → `play()` |
+| 控制 | `playSong` / `playSongs` / `togglePlayPause` / `next` / `previous` / `seek` / `setPlayMode` |
+| 生命周期 | `dispose()` 取消订阅 → `_player.dispose()` |
 
-### 5.3 状态管理 (Riverpod)
+**设计要点**：`currentSong` 通过 `AudioPlayer.sequence[currentIndex].tag` 提取，无 URL 歌曲自动从 `ConcatenatingAudioSource` 中过滤但保留在 `_playlist` 中。播放模式映射至 `just_audio` 的 `LoopMode` + `setShuffleModeEnabled`。
+
+### 5.1 State Providers (`lib/state/providers.dart`, 265 lines)
+
+| Provider | 类型 | 状态字段 | 方法 |
+|----------|------|---------|------|
+| `authProvider` | `StateNotifierProvider<AuthNotifier, AuthState>` | `status(AuthStatus)`, `unikey` | `initialize()`, `loginWithPassword()`, `logout()` |
+| `playerProvider` | `StateNotifierProvider<PlayerNotifier, PlayerState>` | `currentSong`, `playlist`, `currentIndex`, `playMode`, `isPlaying`, `position`, `duration` | `playSong/playSongs/togglePlayPause/next/previous/seek/setPlayMode` |
+| `searchProvider` | `StateNotifierProvider<SearchNotifier, SearchState>` | `query`, `songs`, `playlists`, `isLoading`, `error` | `search(query)`—并发 `searchSongs`+`searchPlaylists`, `clear()` |
+| `recommendSongsProvider` | `FutureProvider<List<Song>>` | — | 按需获取每日推荐 |
+
+所有 State 均有手动 `copyWith` 方法。`PlayerNotifier` 通过 4 条 `StreamSubscription` 自动同步 `PlayerService` 状态流。使用 `if (mounted)` 防泄漏。
+
+### 5.2 UI Widgets (7 文件, 733 lines)
+
+| Widget | 文件 | 行 | 关键特性 |
+|--------|------|-----|---------|
+| `SongTile` | `song_tile.dart` | 94 | 封面 + 兜底图标 / 歌名/歌手 / 时长 `mm:ss` / `onTap` / `showCover` 切换 / 零时长隐藏 trailing |
+| `PlaylistTile` | `playlist_tile.dart` | 92 | 封面 + 曲目数/播放量(万)/创建者 / `onTap` / null-safe |
+| `MiniPlayer` | `mini_player.dart` | 112 | `ConsumerWidget` → `playerProvider`。`LinearProgressIndicator` + 封面 + 歌名/歌手 + 暂停/下一首。`currentSong==null` 时隐藏。点击导航到 `/player` |
+| `ClassicismSearchBar` | `search_bar.dart` | 86 | Material 3 `TextField` + 300ms debounce (`Timer`)。`_controller.addListener`→`setState` 驱动清除按钮可见性 |
+| `SearchResultList` | `search_result_list.dart` | 132 | `ConsumerWidget` → `searchProvider`。`TabBar`(歌曲/歌单) + `TabBarView`。复用 `SongTile`/`PlaylistTile`。loading/error/empty 状态 |
+| `LyricView` | `lyric_view.dart` | 95 | 静态 `parse(lrc)`：`[mm:ss.xx]`→`List<(Duration, String)>`。支持多时间戳行、3 位毫秒。`ListView` 按 `position` 定位高亮行（primary color/bold/大字号） |
+| `QrCodeLogin` | `qr_login.dart` | 154 | 参数接收 `AuthApi`。`initState`→`getLoginQrKey()`→`QrImageView`。2 秒 `Stream.periodic` 轮询。状态：loading/waiting/scanned/success/expired/error。过期/错误时显示刷新按钮 |
+
+### 5.3 UI Pages (5 文件, 922 lines)
+
+| Page | 行 | 说明 |
+|------|-----|------|
+| `HomePage` | 176 | `ConsumerStatefulWidget`。`addPostFrameCallback`→`authProvider.initialize().catchError(...)`。搜索栏 + 3 快捷卡片（每日推荐/歌单/登录）。`AsyncValue.when` 展示推荐歌曲。未登录时显示登录引导 |
+| `SearchPage` | 28 | AppBar 内嵌 `ClassicismSearchBar` + `SearchResultList` + `MiniPlayer` |
+| `PlaylistPage` | 204 | `ConsumerStatefulWidget`。`ModalRoute.settings.arguments` 接收 `playlistId`。`SliverAppBar` 展开封面 + 渐变遮罩。元数据栏（创建者/曲目数/播放量）。"播放全部"按钮。`SongTile(showCover: false)` 曲目列表。`CustomScrollView` + `SliverList` |
+| `PlayerPage` | 344 | `ConsumerStatefulWidget`。模糊封面背景 + 280×280 专辑封面（阴影）。歌名/歌手。可拖 `Slider` + 时间标签。播放模式切换（`sequential→shuffle→singleRepeat`）。Prev/PlayPause/Next。`LyricView`（歌曲切换时自动 `getLyric`）。关闭按钮 → `Navigator.pop` |
+| `LoginPage` | 170 | `ConsumerStatefulWidget` + `TabController`。Tab1: QR 扫码（`QrCodeLogin` 占位，待云函数）。Tab2: 手机号+密码表单 + `FilledButton`。空字段校验 + loading spinner + 错误提示。登录成功 `Navigator.pop` |
+
+### 5.4 Routing + main.dart (106 lines)
 
 ```dart
-// 认证状态
-final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(ref.read(authServiceProvider));
-});
+main() async:
+  WidgetsFlutterBinding.ensureInitialized()
+  AppConfig.instance.init() → SharedPreferences
+  CookieManager(config) → cookie fingerprints
+  NeteaseRequest(dio, cookie, config) → request dispatcher
+  MusicApi / AuthApi / AuthService / PlayerService → service layer
+  ProviderScope overrides → musicApi/authService/playerService providers
+  ClassicismApp → MaterialApp
 
-// 播放器状态
-final playerProvider = StateNotifierProvider<PlayerNotifier, PlayerState>((ref) {
-  return PlayerNotifier(ref.read(musicApiProvider));
-});
-
-// 搜索状态
-final searchProvider = StateNotifierProvider.family<SearchNotifier, SearchState, String>((ref, query) {
-  return SearchNotifier(ref.read(musicApiProvider), query);
-});
+Routes:
+  /         → HomePage
+  /search   → SearchPage
+  /playlist → PlaylistPage (arguments: playlistId)
+  /player   → PlayerPage
+  /login    → LoginPage
 ```
 
-### 5.4 播放器实现要点
+**Model 更新**：`Playlist` 模型新增 `tracks: List<Song>?` 字段，从 `fromJson` 解析 song 数组。
 
-```dart
-// 使用 just_audio 播放远程 URL
-final player = AudioPlayer();
+### 5.5 测试 (73 新增)
 
-Future<void> playSong(Song song) async {
-  final urls = await musicApi.getSongUrls([song.id]);
-  if (urls.isEmpty || urls.first.url == null) {
-    // 无版权或VIP限制
-    return;
-  }
-  await player.setAudioSource(
-    AudioSource.uri(Uri.parse(urls.first.url!)),
-  );
-  player.play();
-}
-```
-
-**注意**：网易云歌曲 URL 有时效性（通常几小时），需在播放前实时获取。
+| 文件 | 测试数 | 覆盖 |
+|------|--------|------|
+| `widget_song_tile_test.dart` | 10 | 渲染/空字段/时长格式/封面兜底/onTap/showCover |
+| `widget_playlist_tile_test.dart` | 9 | 渲染/播放量千分位/空封面/onTap/null字段 |
+| `widget_search_bar_test.dart` | 10 | hint/提交/debounce/空查询/清除按钮/trim/debounce取消 |
+| `widget_lyric_view_test.dart` | 15 | parse×10 (毫秒/多行/多时间戳/排序) + widget×5 (渲染/空态/高亮/ListView) |
+| `page_home_test.dart` | 6 | 搜索栏/快捷卡片/登录提示/loading/导航 |
+| `page_player_test.dart` | 8 | 关闭按钮/控件/空态/专辑图/进度条/播放模式 |
+| `page_login_test.dart` | 10 | TabBar/QR页/手机表单/输入框/登录按钮/空值校验 |
+| `page_search_test.dart` | 5 | AppBar/搜索图标/空结果/搜索输入/MiniPlayer |
 
 ---
 
-## Phase 6：云函数部署
+## Phase 6：云函数部署 ✅
 
-### 6.1 云函数代码结构
+> **状态：DONE 代码就绪** （2026-06-26 Evening）
+> 产出：`xeapi-proxy/api/xeapi.js` (381行, 零npm依赖) + Vercel + Cloudflare Workers 双平台部署
+> ⚠️ 免费域名被墙，需绑定自定义域名方可生产使用
 
-```
-xeapi-proxy/
-├── api/
-│   └── xeapi-proxy.js       # Vercel Serverless Function
-├── util/
-│   ├── crypto.js            # 从原项目复制
-│   ├── config.json          # 从原项目复制
-│   └── xeapiKey.js          # 从原项目复制
-└── package.json
-```
+**目标**：实现 `xeapi` 加密的云函数中转，使 Flutter 客户端可以间接调用 `xeapi` 端点。
 
-### 6.2 `xeapi-proxy.js` 核心逻辑
+### 6.1 实际架构（与计划差异）
 
-```javascript
-const { xeapi, registerXeapiKey } = require('./util/crypto');
-const axios = require('axios');
+| 项目 | 原计划 | 实际 |
+|------|--------|------|
+| 文件数 | 3+ util 文件复制 | **1 个自包含文件**（381行） |
+| npm 依赖 | `crypto-js` + `axios` | **零外部依赖**（仅 Node 内置 `crypto`/`zlib`/`https`） |
+| 端点数 | 3 (`register_anonimous`/`register_xeapikey`/`song_url_v1`) | **2**（`register_xeapikey` 已由 Dart 端 HMAC-SHA256 直连实现） |
+| 平台 | Vercel only | Vercel + Cloudflare Workers 双版本 |
 
-module.exports = async (req, res) => {
-  const { endpoint, data, cookie } = req.body;
+### 6.2 云函数实现 (`xeapi-proxy/api/xeapi.js`, 381 lines)
 
-  const encoded = xeapi(endpoint, data, { cookie });
+完整自包含实现，零 npm 依赖。结构：
 
-  const response = await axios.post(
-    `https://interface.music.163.com/xeapi${endpoint}`,
-    encoded,
-    { headers: { 'Content-Type': 'application/json' } }
-  );
+| 模块 | 行 | 实现 |
+|------|-----|------|
+| 常量 | 12-16 | `xeapiStaticKey`(32B hex), `xeapiSignKey`, `eapiKey`, `x25519SpkiPrefix` |
+| AES 原语 | 23-35 | `aesEcbEncrypt`/`aesEcbDecrypt` — `crypto.createCipheriv(Decipheriv)` + 自动密钥位数 |
+| X25519 ECDH | 37-58 | `createX25519PublicKey`(SPKI), `deriveX25519AesKey`(HKDF-like), `xeapiEncryptS`(ECDH + AES-128-GCM) |
+| XEAPI 加密 | 60-72, 88-98 | `buildXeapiPlaintext`(queryString + base64 body + `e_r=true`), `xeapi()`: AES-ECB×3 + XOR mid-transform + ECDH→S 字段 |
+| 响应解密 | 74-80 | `xeapiResDecrypt`: AES-ECB(eapiKey) → gzip 魔数检测 → JSON.parse |
+| 签名与密钥注册 | 82-86, 100-141 | `xeapiSign`(HMAC-SHA256), `xeapiDecryptPublicKey`, `registerXeapiKey`(调用 `/api/gorilla/anti/crawler/security/key/get` + 签名验证) |
+| HTTP 处理 | 143-198 | Vercel `module.exports` + Cloudflare `export default { fetch }` 双格式 |
+| Cookie 提取 | 186-188 | `Set-Cookie` → `Domain=...` 正则剥离 → 返回 `List<String>` |
 
-  // xeapi 响应需解密
-  const body = xeapiResDecrypt(response.data);
+**关键设计**：内存变量 (`publicKeyState`, `sessionId`, `sessionKey`) 在 Vercel/Worker 实例间持久化，减少密钥注册频率。响应头 `x-encr-ssid`/`x-encr-sskey` 自动缓存用于会话复用。
 
-  res.json({ body, cookie: extractCookie(response.headers) });
-};
-```
+### 6.3 Flutter 端修改
 
-### 6.3 部署
+| 文件 | 修改 |
+|------|------|
+| `xeapi_proxy.dart:22` | `call()` 加 `{String deviceId = ''}` 可选命名参数（向后兼容） |
+| `auth_api.dart:106` | `registerAnonymous()` 传递 `deviceId: _config.deviceId` |
+| `music_api.dart:105` | `getSongUrls()` 传递 `deviceId: AppConfig.instance.deviceId` |
+| `request_engine.dart:148` | xeapi 分支 POST data 包含 `'deviceId': _config.deviceId` |
+| `main.dart:37-52` | `XEAPI_PROXY_URL` 编译时常量注入 (`String.fromEnvironment`)。真实 `XeapiProxy` 实例（URL 非空时）或 `null` |
+
+### 6.4 部署
 
 ```bash
 # Vercel
-cd xeapi-proxy
-vercel deploy --prod
+cd xeapi-proxy && vercel deploy --prod
+# → https://xeapi-proxy-xxxxx.vercel.app/api/xeapi
 
-# 环境变量
-# 无需任何环境变量（纯透传计算）
+# Cloudflare Workers
+cd xeapi-proxy && wrangler deploy
+# → https://classicism-xeapi.xxxxx.workers.dev
+
+# Flutter
+flutter run --dart-define=XEAPI_PROXY_URL=https://your-domain.com/api/xeapi
 ```
 
-### 6.4 Flutter 端封装
+### 6.5 文件清单
 
-```dart
-class XeapiProxy {
-  static const _proxyUrl = 'https://your-proxy.vercel.app/api/xeapi-proxy';
-
-  Future<Map<String, dynamic>> call(
-    String endpoint,
-    Map<String, dynamic> data,
-    String cookie,
-  ) async {
-    final response = await Dio().post(_proxyUrl, data: {
-      'endpoint': endpoint,
-      'data': data,
-      'cookie': cookie,
-    });
-    return response.data['body'];
-  }
-}
+```
+xeapi-proxy/
+├── api/xeapi.js      (381 lines) — 自包含云函数
+├── wrangler.toml     — Cloudflare Workers 配置 (nodejs_compat)
+├── package.json      — { "dependencies": {} }
+└── vercel.json       — Vercel 路由 + CORS 头
 ```
 
 ---
 
-## Phase 7：测试 & 审查 ✅ (部分)
+## Phase 7：测试 & 审查 ✅
 
-> **状态：已完成单元/集成测试 + 全代码审查** （2026-06-26）
-> 产出：271 tests，`flutter analyze` 零错误，修复 5 个 Bug
+> **状态：DONE** （2026-06-26）
+> 产出：344 tests，`flutter analyze` 零错误，修复 5 个 Bug
 
 ### 7.1 测试策略（已实施）
 
@@ -409,34 +433,45 @@ class XeapiProxy {
 | 工具函数 | 单元测试 | hex/base64/base62/random 全覆盖 | ✅ |
 | 错误处理 | 单元测试 | 网络异常、非200响应、签名校验失败 | ✅ |
 | 审查 | 逐文件对比上游 | 5 bugs 发现并修复 | ✅ |
-| UI | Widget测试 | 各页面渲染、状态流转 | ⬜ |
-| 集成测试 | 真实 API | 首次启动完整链路验证 | ⬜ (需云函数) |
+| UI Widgets | Widget测试 | SongTile/PlaylistTile/SearchBar/LyricView 渲染与交互 | ✅ |
+| UI Pages | Widget测试 | Home/Search/Player/Login 页面渲染、表单校验、状态流转 | ✅ |
+| 集成测试 | 真实 API | 首次启动完整链路验证 | ⬜ (待自定义域名) |
 
 ### 7.2 测试结构
 
 ```
-test/                               # ← 全部已实现
-├── golden_vectors.json             # 17 黄金向量（已复制到 app/test/）
-├── eapi_test.dart                  # MD5×4 + AES-ECB×8 + EAPI×16 + eapiResDecrypt×6 = 34 tests ✅
-├── weapi_test.dart                 # AES-CBC×3 + RSA×2 + WEAPI×12 = 18 tests ✅
-├── helpers_test.dart               # hex/base64/random/base62 全覆盖 = 28 tests ✅
-├── models_test.dart                # Song/Lyric/Playlist/User/SearchResult fromJson = 21 tests ✅
-├── config_test.dart                # init/持久化/异常 = 17 tests ✅
-├── cookie_manager_test.dart        # 解析/序列化/processCookie/buildHeader = 25 tests ✅
-├── request_engine_test.dart        # URL/headers/body/crypto/status/error = 31 tests ✅
-├── xeapi_helpers_test.dart         # xeapiSign + xeapiDecryptPublicKey = 9 tests ✅
-├── xeapi_proxy_test.dart           # call/response/error = 8 tests ✅
-├── auth_api_test.dart              # 7 methods + error paths = 37 tests ✅
-├── auth_service_test.dart          # initialize/login/poll/logout/error = 8 tests ✅
-├── music_api_test.dart             # 9 methods + error paths = 27 tests ✅
-└── widget_test.dart                # 占位 App 渲染 = 1 test ✅
+test/
+├── golden_vectors.json              # 17 黄金向量
+├── eapi_test.dart                   # 34 tests ✅
+├── weapi_test.dart                  # 18 tests ✅
+├── helpers_test.dart                # 28 tests ✅
+├── models_test.dart                 # 21 tests ✅
+├── config_test.dart                 # 17 tests ✅
+├── cookie_manager_test.dart         # 25 tests ✅
+├── request_engine_test.dart         # 31 tests ✅
+├── xeapi_helpers_test.dart          # 9 tests ✅
+├── xeapi_proxy_test.dart            # 8 tests ✅
+├── auth_api_test.dart               # 37 tests ✅
+├── auth_service_test.dart           # 8 tests ✅
+├── music_api_test.dart              # 27 tests ✅
+├── widget_test.dart                 # 1 test ✅
+├── test_helpers.dart                # Mock 工具 ✅
+├── widget_song_tile_test.dart       # 10 tests ✅ (Phase 5)
+├── widget_playlist_tile_test.dart   # 9 tests ✅ (Phase 5)
+├── widget_search_bar_test.dart      # 10 tests ✅ (Phase 5)
+├── widget_lyric_view_test.dart      # 15 tests ✅ (Phase 5)
+├── page_home_test.dart              # 6 tests ✅ (Phase 5)
+├── page_player_test.dart            # 8 tests ✅ (Phase 5)
+├── page_login_test.dart             # 10 tests ✅ (Phase 5)
+└── page_search_test.dart            # 5 tests ✅ (Phase 5)
 ```
 
 ### 7.3 发布检查清单
 
 - [x] `flutter analyze` 零错误
-- [x] `flutter test` 全通过 (271/271)
-- [ ] 云函数已部署并验证
+- [x] `flutter test` 全通过 (344/344)
+- [x] 云函数代码已部署 (Vercel + Cloudflare Workers)
+- [ ] 云函数自定义域名绑定（免费域名被墙）
 - [ ] Release build: `flutter build apk --release`
 - [ ] APK 体积 < 30MB
 - [ ] 首次启动完整链路验证（安装 → 游客注册 → 搜索 → 试听）
@@ -471,10 +506,10 @@ test/                               # ← 全部已实现
 | 3 | 认证模块 | 2h | 3h | ✅ |
 | 4 | 核心业务接口 | 2h | 2h | ✅ |
 | Review | 全代码审查 + 测试增强 | — | 5h | ✅ |
-| 5 | Flutter UI | 8-12h | — | ⬜ |
-| 6 | 云函数 | 2h | — | ⬜ |
-| 7 | 集成测试 & 发布 | 3h | — | ⬜ |
-| **总计** | | **约 28-32h** | **20h elapsed** | |
+| 5 | Flutter UI | 8-12h | ~8h | ✅ |
+| 6 | 云函数 | 2h | ~3h | ✅ (代码就绪) |
+| 7 | 集成测试 & 发布 | 3h | — | ⬜ (待自定义域名) |
+| **总计** | | **约 28-32h** | **~31h** | |
 
 ---
 
@@ -485,7 +520,7 @@ test/                               # ← 全部已实现
 | ~~pointycastle RSA 无填充模式不支持~~ | 已解决：手动 ASN.1 DER 解析 + `RSAEngine` 左填零至 128 字节 | ✅ |
 | ~~Cookie 未注入 MUSIC_U 导致 weapi 登录态请求失败~~ | 审查发现并修复：从 AppConfig 注入持久化 auth 状态 | ✅ |
 | ~~EAPI/API overrideDomain 参数被忽略~~ | 审查发现并修复：支持自定义域名参数 | ✅ |
-| X25519 云函数延迟过高 | 使用 Cloudflare Workers（全球边缘节点），延迟 < 100ms | ⬜ |
+| X25519 云函数延迟过高 | Cloudflare Workers 已部署（全球边缘节点），Vercel 备用。待自定义域名绑定后国内可访问 | ⬜ |
 | 网易云 API 变更 | 跟进上游 `@neteasecloudmusicapienhanced/api` npm 包更新，同步修正 | ⬜ |
 | 歌曲 URL 防盗链 | 播放前实时获取 URL，失败则降级尝试其他音质等级 | ⬜ |
 | VIP 歌曲限制 (fee=1) | 仅试听 30 秒，UI 清晰标注 | ⬜ |

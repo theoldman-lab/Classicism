@@ -1,0 +1,4 @@
+name = "classicism-xeapi"
+main = "api/xeapi.js"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]

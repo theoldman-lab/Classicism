@@ -18,14 +18,16 @@ class XeapiProxy {
   Future<XeapiProxyResponse> call(
     String endpoint,
     Map<String, dynamic> data,
-    String cookie,
-  ) async {
+    String cookie, {
+    String deviceId = '',
+  }) async {
     final response = await _dio.post(
       _proxyUrl,
       data: {
         'endpoint': endpoint,
         'data': data,
         'cookie': cookie,
+        'deviceId': deviceId,
       },
       options: Options(
         responseType: ResponseType.json,

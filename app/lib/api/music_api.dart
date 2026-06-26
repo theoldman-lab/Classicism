@@ -1,3 +1,4 @@
+import '../core/config.dart';
 import '../core/crypto/constants.dart';
 import '../core/request_engine.dart';
 import '../models/lyric.dart';
@@ -101,6 +102,7 @@ class MusicApi {
       '/api/song/enhance/player/url/v1',
       data,
       '', // cookie handled by cloud function
+      deviceId: AppConfig.instance.deviceId,
     );
 
     final body = result.body;

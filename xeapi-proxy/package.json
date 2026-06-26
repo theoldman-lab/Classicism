@@ -1,0 +1,10 @@
+{
+  "name": "classicism-xeapi-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "XEAPI cloud function proxy for Classicism — Netease Cloud Music client",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {}
+}

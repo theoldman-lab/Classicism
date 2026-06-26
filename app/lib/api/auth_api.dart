@@ -103,6 +103,7 @@ class AuthApi {
       '/api/register/anonimous',
       {'username': username},
       'deviceId=${Uri.encodeComponent(deviceId)}',
+      deviceId: deviceId,
     );
 
     if (result.body['code'] != 200) {

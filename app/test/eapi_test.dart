@@ -130,4 +130,55 @@ void main() {
       });
     }
   });
+
+  // ==========================================================
+  // eapiResDecrypt — response decryption
+  // ==========================================================
+  group('eapiResDecrypt', () {
+    test('decrypts RSA-encrypted hex to JSON', () {
+      // Encrypt a simple JSON, then decrypt it
+      final plaintext = utf8.encode('{"code":200,"data":"test"}');
+      final encrypted = aesEcbEncrypt(
+        plaintext,
+        utf8.encode(eapiKey),
+      );
+      final hex = bytesToHex(encrypted).toUpperCase();
+
+      final result = eapiResDecrypt(hex);
+      expect(result, {'code': 200, 'data': 'test'});
+    });
+
+    test('decrypts gzip-compressed response (aeapi: true)', () async {
+      final json = '{"code":200,"data":"compressed_test"}';
+      final gzipBytes = Uint8List.fromList(gzip.encode(utf8.encode(json)));
+      final encrypted = aesEcbEncrypt(gzipBytes, utf8.encode(eapiKey));
+      final hex = bytesToHex(encrypted).toUpperCase();
+
+      final result = eapiResDecrypt(hex, aeapi: true);
+      expect(result, {'code': 200, 'data': 'compressed_test'});
+    });
+
+    test('returns null for invalid hex', () {
+      final result = eapiResDecrypt('not_valid_hex');
+      expect(result, isNull);
+    });
+
+    test('returns null for empty string', () {
+      final result = eapiResDecrypt('');
+      expect(result, isNull);
+    });
+
+    test('returns null for garbled ciphertext', () {
+      final result = eapiResDecrypt('DEADBEEF');
+      expect(result, isNull);
+    });
+
+    test('returns null for non-JSON decrypted data', () {
+      final plaintext = utf8.encode('not json');
+      final encrypted = aesEcbEncrypt(plaintext, utf8.encode(eapiKey));
+      final hex = bytesToHex(encrypted).toUpperCase();
+      final result = eapiResDecrypt(hex);
+      expect(result, isNull);
+    });
+  });
 }

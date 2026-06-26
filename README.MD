@@ -45,50 +45,69 @@ Classicism/
 │   ├── pubspec.yaml         #   Dart 依赖
 │   ├── lib/
 │   │   ├── main.dart        #   入口（Material3 + Riverpod）
-│   │   ├── core/crypto/     #   加密层（⬅ Phase 1 完成）
-│   │   │   ├── constants.dart   # 所有密钥/域名/设备指纹常量
-│   │   │   ├── helpers.dart     # hex/base64/random 工具
-│   │   │   ├── eapi.dart        # MD5 + AES-128-ECB
-│   │   │   └── weapi.dart       # AES-128-CBC + RSA-1024 + ASN.1 DER
-│   │   ├── core/            #   （⬅ Phase 2）
-│   │   ├── api/             #   （⬅ Phase 3-4）
-│   │   ├── models/          #   数据模型骨架
-│   │   ├── services/        #   服务层骨架
-│   │   └── state/           #   状态管理骨架
+│   │   ├── core/
+│   │   │   └── crypto/
+│   │   │       ├── constants.dart   # 所有密钥/域名/设备指纹常量 (Phase 0)
+│   │   │       ├── helpers.dart     # hex/base64/random/base62 工具
+│   │   │       ├── eapi.dart        # MD5 + AES-ECB（128/192/256 自适应）
+│   │   │       ├── weapi.dart       # AES-128-CBC + RSA-1024 + ASN.1 DER
+│   │   │       └── xeapi_helpers.dart # HMAC-SHA256 签名 + AES-256-ECB 解密 (Phase 3)
+│   │   ├── core/
+│   │   │   ├── config.dart          # 全局配置 + SharedPreferences 持久化
+│   │   │   ├── cookie_manager.dart  # Cookie 解析/处理/指纹生成
+│   │   │   └── request_engine.dart  # 中央请求调度器（Crypto 分发 + HTTP）
+│   │   ├── api/
+│   │   │   ├── auth_api.dart        # 认证模块（7 方法：注册/登录/QR/token）
+│   │   │   ├── music_api.dart       # 核心业务接口（9 方法 + 2 便捷）
+│   │   │   └── xeapi_proxy.dart     # XEAPI 云函数代理封装
+│   │   ├── models/                  # 数据模型（Song/Lyric/Playlist/User/SearchResult）
+│   │   ├── services/                # 服务层（AuthService/PlayerService）
+│   │   └── state/                   # 状态管理骨架 (Phase 5)
 │   └── test/
 │       ├── golden_vectors.json      # 17 个黄金测试向量
-│       ├── eapi_test.dart           # 28 tests
-│       └── weapi_test.dart          # 18 tests
+│       ├── eapi_test.dart           # 34 tests
+│       ├── weapi_test.dart          # 18 tests
+│       ├── helpers_test.dart        # 28 tests
+│       ├── models_test.dart         # 21 tests
+│       ├── config_test.dart         # 17 tests
+│       ├── cookie_manager_test.dart # 25 tests
+│       ├── request_engine_test.dart # 31 tests
+│       ├── xeapi_helpers_test.dart  # 9 tests
+│       ├── xeapi_proxy_test.dart    # 8 tests
+│       ├── auth_api_test.dart       # 37 tests
+│       ├── auth_service_test.dart   # 8 tests
+│       ├── music_api_test.dart      # 27 tests
+│       └── widget_test.dart         # 1 test
 ├── scripts/
 │   └── gen_golden_vectors.js        # 黄金向量生成器
 ├── test/
 │   └── golden_vectors.json          # 生成物（17 vectors）
-├── interface.d.ts           # 完整 TypeScript 类型声明（Dart 模型参考）
-├── package.json             # 上游项目依赖信息
-├── module/                  # 400+ API端点定义（移植参考）
-│   ├── login_cellphone.js   #   手机号登录 (weapi)
-│   ├── login_qr_key.js      #   QR登录-获取密钥 (eapi)
-│   ├── login_qr_check.js    #   QR登录-轮询状态 (eapi)
-│   ├── register_anonimous.js #  游客登录 (xeapi)
-│   ├── register_xeapikey.js  #  获取X25519公钥 (xeapi)
-│   ├── search.js            #   搜索 (eapi)
-│   ├── song_url_v1.js       #   歌曲播放链接 (xeapi)
-│   ├── lyric.js             #   歌词 (eapi)
-│   ├── song_detail.js       #   歌曲详情 (eapi)
-│   ├── playlist_detail.js   #   歌单详情 (eapi)
-│   ├── user_playlist.js     #   用户歌单 (weapi)
-│   ├── recommend_songs.js   #   每日推荐 (weapi)
-│   └── ...                  #   其余380+端点
-└── util/                    # 核心工具库（加密移植源）
-    ├── crypto.js            #   6种加密方案：weapi/eapi/linuxapi/xeapi/api
-    ├── request.js           #   请求引擎：cookie管理、加密分发、响应解密
-    ├── index.js             #   Cookie/deviceId工具函数
-    ├── option.js            #   请求选项构造
-    ├── config.json          #   API域名及配置常量
-    ├── xeapiKey.js          #   X25519密钥管理
-    ├── client-sign.js       #   客户端签名
-    ├── apicache.js          #   响应缓存中间件
-    └── memory-cache.js      #   内存TTL缓存
+├── interface.d.ts                   # 完整 TypeScript 类型声明（Dart 模型参考）
+├── package.json                     # 上游项目依赖信息
+├── module/                          # 400+ API端点定义（移植参考）
+│   ├── login_cellphone.js           #   手机号登录 (weapi)
+│   ├── login_qr_key.js              #   QR登录-获取密钥 (eapi)
+│   ├── login_qr_check.js            #   QR登录-轮询状态 (eapi)
+│   ├── register_anonimous.js        #   游客登录 (xeapi)
+│   ├── register_xeapikey.js          #   获取X25519公钥 (特殊直接 API)
+│   ├── search.js                    #   搜索 (eapi)
+│   ├── song_url_v1.js               #   歌曲播放链接 (xeapi)
+│   ├── lyric.js                     #   歌词 (eapi)
+│   ├── song_detail.js               #   歌曲详情 (weapi)
+│   ├── playlist_detail.js           #   歌单详情 (eapi)
+│   ├── user_playlist.js             #   用户歌单 (weapi)
+│   ├── recommend_songs.js           #   每日推荐 (weapi)
+│   └── ...                          #   其余380+端点
+└── util/                            # 核心工具库（加密移植源）
+    ├── crypto.js                    #   6种加密方案：weapi/eapi/linuxapi/xeapi/api
+    ├── request.js                   #   请求引擎：cookie管理、加密分发、响应解密
+    ├── index.js                     #   Cookie/deviceId工具函数
+    ├── option.js                    #   请求选项构造
+    ├── config.json                  #   API域名及配置常量
+    ├── xeapiKey.js                  #   X25519密钥管理
+    ├── client-sign.js               #   客户端签名
+    ├── apicache.js                  #   响应缓存中间件
+    └── memory-cache.js              #   内存TTL缓存
 ```
 
 ## 核心概念
@@ -97,9 +116,10 @@ Classicism/
 
 | 方案 | 算法 | 典型端点 | Dart 移植 |
 |------|------|---------|-----------|
-| **eapi** | MD5 + AES-128-ECB | 搜索、歌单、歌词、QR登录 | `pointycastle` |
-| **weapi** | AES-128-CBC×2 + RSA-1024 | 手机登录、推荐、用户歌单 | `pointycastle` |
+| **eapi** | MD5 + AES-ECB（128/256 自适应） | 搜索、歌单、歌词、QR登录 | `pointycastle` |
+| **weapi** | AES-128-CBC×2 + RSA-1024 | 手机登录、推荐、用户歌单、歌曲详情 | `pointycastle` |
 | **xeapi** | X25519 ECDH + AES-128-GCM | 歌曲链接、游客登录 | **云函数代理** |
+| **xeapi sign** | HMAC-SHA256 + AES-256-ECB | X25519 公钥获取 | 直接 Dart 实现 |
 | **linuxapi** | AES-128-ECB | 桌面端专用 | 暂不移植 |
 | **api** | 明文 | 少量旧端点 | 直接请求 |
 
@@ -174,9 +194,10 @@ login_refresh() [eapi] ──→ 定期刷新token
 |---|------|------|
 | 0 | 项目脚手架 & 常量定义 | ✅ |
 | 1 | Dart 加密原语层（weapi / eapi） | ✅ |
-| 2 | 请求引擎 + Cookie 管理 | ⬜ |
-| 3 | 认证模块（登录/注册） | ⬜ |
-| 4 | 核心业务接口（搜索/播放/歌单/歌词） | ⬜ |
+| 2 | 请求引擎 + Cookie 管理 | ✅ |
+| 3 | 认证模块（登录/注册/QR/token） | ✅ |
+| 4 | 核心业务接口（搜索/播放/歌单/歌词） | ✅ |
+| Review | 全代码审查 + 测试增强（271 tests, 零错误） | ✅ |
 | 5 | Flutter UI + 播放器 | ⬜ |
 | 6 | 云函数部署 | ⬜ |
 

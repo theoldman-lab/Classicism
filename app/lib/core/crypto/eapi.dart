@@ -9,10 +9,10 @@ import 'constants.dart';
 import 'helpers.dart';
 
 // ============================================================
-// AES-128-ECB (PKCS7 padding)
+// AES-ECB (PKCS7 padding, auto-detects key size: 128/192/256-bit)
 // ============================================================
 
-Uint8List _aesEcbEncrypt(Uint8List plaintext, Uint8List key) {
+Uint8List aesEcbEncrypt(Uint8List plaintext, Uint8List key) {
   final cipher =
       PaddedBlockCipherImpl(PKCS7Padding(), ECBBlockCipher(AESEngine()));
   cipher.init(
@@ -22,7 +22,7 @@ Uint8List _aesEcbEncrypt(Uint8List plaintext, Uint8List key) {
   return cipher.process(plaintext);
 }
 
-Uint8List _aesEcbDecrypt(Uint8List ciphertext, Uint8List key) {
+Uint8List aesEcbDecrypt(Uint8List ciphertext, Uint8List key) {
   final cipher =
       PaddedBlockCipherImpl(PKCS7Padding(), ECBBlockCipher(AESEngine()));
   cipher.init(
@@ -43,7 +43,7 @@ Map<String, String> eapi(String url, Map<String, dynamic> object) {
   final digest = crypto.md5.convert(utf8.encode(message)).toString();
   final data = '$url$eapiDelimiter$text$eapiDelimiter$digest';
   final encrypted =
-      _aesEcbEncrypt(utf8.encode(data), utf8.encode(eapiKey));
+      aesEcbEncrypt(utf8.encode(data), utf8.encode(eapiKey));
   return {'params': bytesToHex(encrypted).toUpperCase()};
 }
 
@@ -56,7 +56,7 @@ Map<String, String> eapi(String url, Map<String, dynamic> object) {
 dynamic eapiResDecrypt(String hexParams, {bool aeapi = false}) {
   try {
     final ciphertext = hexToBytes(hexParams);
-    final decrypted = _aesEcbDecrypt(ciphertext, utf8.encode(eapiKey));
+    final decrypted = aesEcbDecrypt(ciphertext, utf8.encode(eapiKey));
 
     if (aeapi) {
       final decompressed = gzip.decode(decrypted);

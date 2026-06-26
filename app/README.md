@@ -13,7 +13,7 @@
 cd app
 flutter pub get
 flutter run      # debug
-flutter test     # 46 tests
+flutter test     # 271 tests
 ```
 
 ## 目录结构
@@ -26,19 +26,37 @@ app/
 │   ├── core/
 │   │   └── crypto/
 │   │       ├── constants.dart         # 密钥/域名/设备指纹常量 (Phase 0)
-│   │       ├── helpers.dart           # hex/base64/random 工具
-│   │       ├── eapi.dart              # MD5 + AES-128-ECB (Phase 1)
-│   │       └── weapi.dart             # AES-128-CBC + RSA-1024 (Phase 1)
-│   ├── core/                          # (Phase 2) cookie_manager, request_engine, config
-│   ├── api/                           # (Phase 3-4) auth_api, music_api, xeapi_proxy
-│   ├── models/                        # 数据模型骨架
-│   ├── services/                      # 服务层骨架
-│   ├── state/                         # Riverpod providers
+│   │       ├── helpers.dart           # hex/base64/random/base62 工具
+│   │       ├── eapi.dart              # MD5 + AES-ECB (Phase 1)
+│   │       ├── weapi.dart             # AES-128-CBC + RSA-1024 + ASN.1 DER (Phase 1)
+│   │       └── xeapi_helpers.dart     # HMAC-SHA256 签名 + AES-256-ECB 解密 (Phase 3)
+│   ├── core/
+│   │   ├── config.dart                # 全局配置 + SharedPreferences 持久化 (Phase 2)
+│   │   ├── cookie_manager.dart        # Cookie 解析/处理/指纹生成 (Phase 2)
+│   │   └── request_engine.dart        # 中央请求调度器 (Phase 2)
+│   ├── api/
+│   │   ├── auth_api.dart              # 认证模块 (Phase 3)
+│   │   ├── music_api.dart             # 核心业务接口 (Phase 4)
+│   │   └── xeapi_proxy.dart           # XEAPI 云函数代理 (Phase 3)
+│   ├── models/                        # 数据模型 (Song/Lyric/Playlist/User/SearchResult)
+│   ├── services/                      # 服务层 (AuthService/PlayerService)
+│   ├── state/                         # Riverpod providers (Phase 5)
 │   └── ui/                            # (Phase 5) pages + widgets
 └── test/
     ├── golden_vectors.json            # 17 黄金测试向量
-    ├── eapi_test.dart                 # 28 tests
-    └── weapi_test.dart                # 18 tests
+    ├── eapi_test.dart                 # 34 tests
+    ├── weapi_test.dart                # 18 tests
+    ├── helpers_test.dart              # 28 tests
+    ├── models_test.dart               # 21 tests
+    ├── config_test.dart               # 17 tests
+    ├── cookie_manager_test.dart       # 25 tests
+    ├── request_engine_test.dart       # 31 tests
+    ├── xeapi_helpers_test.dart        # 9 tests
+    ├── xeapi_proxy_test.dart          # 8 tests
+    ├── auth_api_test.dart             # 37 tests
+    ├── auth_service_test.dart         # 8 tests
+    ├── music_api_test.dart            # 27 tests
+    └── widget_test.dart               # 1 test
 ```
 
 ## 开发阶段
@@ -47,9 +65,10 @@ app/
 |---|------|------|
 | 0 | 项目脚手架 & 常量 | ✅ |
 | 1 | Dart 加密层 (eapi + weapi) | ✅ |
-| 2 | 请求引擎 + Cookie 管理 | ⬜ |
-| 3 | 认证模块 | ⬜ |
-| 4 | 核心业务接口 | ⬜ |
+| 2 | 请求引擎 + Cookie 管理 | ✅ |
+| 3 | 认证模块 | ✅ |
+| 4 | 核心业务接口 | ✅ |
+| Review | 全代码审查 + 测试增强 | ✅ |
 | 5 | Flutter UI + 播放器 | ⬜ |
 | 6 | 云函数部署 | ⬜ |
 

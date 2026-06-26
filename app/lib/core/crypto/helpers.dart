@@ -30,6 +30,7 @@ Uint8List randomBytes(int length) {
 }
 
 String base62Encode(Uint8List bytes) {
+  if (bytes.isEmpty) return 'a';
   const alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   var value = BigInt.parse(bytesToHex(bytes), radix: 16);
   if (value == BigInt.zero) return alphabet[0];
